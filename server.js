@@ -1,5 +1,5 @@
 HOST = null; // localhost
-PORT = 8001;
+PORT = 27261;
 
 // when the daemon started
 var starttime = (new Date()).getTime();
@@ -24,13 +24,14 @@ var channel = new function () {
       callbacks = [];
 
   this.appendMessage = function (nick, type, text) {
-    var m = { nick: nick
-            , type: type // "msg", "join", "part"
-            , text: text
-            , timestamp: (new Date()).getTime()
-            };
+    var m = {
+      nick: nick,
+      type: type, // "msg", "join", "part"
+      text: text,
+      timestamp: +new Date()
+    };
 
-    switch (type) {
+    switch ( type ) {
       case "msg":
         sys.puts("<" + nick + "> " + text);
         break;
@@ -125,19 +126,15 @@ fu.listen(PORT, HOST);
 fu.get("/", fu.staticHandler("index.html"));
 fu.get("/style.css", fu.staticHandler("style.css"));
 fu.get("/client.js", fu.staticHandler("client.js"));
-fu.get("/jquery-1.2.6.min.js", fu.staticHandler("jquery-1.2.6.min.js"));
-
 
 fu.get("/who", function (req, res) {
   var nicks = [];
-  for (var id in sessions) {
-    if (!sessions.hasOwnProperty(id)) continue;
+  for ( var id in sessions ) {
+    if ( !sessions.hasOwnProperty(id) ) continue;
     var session = sessions[id];
     nicks.push(session.nick);
   }
-  res.simpleJSON(200, { nicks: nicks
-                      , rss: mem.rss
-                      });
+  res.simpleJSON(200, { nicks: nicks, rss: mem.rss });
 });
 
 fu.get("/join", function (req, res) {
@@ -155,11 +152,12 @@ fu.get("/join", function (req, res) {
   //sys.puts("connection: " + nick + "@" + res.connection.remoteAddress);
 
   channel.appendMessage(session.nick, "join");
-  res.simpleJSON(200, { id: session.id
-                      , nick: session.nick
-                      , rss: mem.rss
-                      , starttime: starttime
-                      });
+  res.simpleJSON(200, {
+    id: session.id,
+    nick: session.nick,
+    rss: mem.rss,
+    starttime: starttime
+  });
 });
 
 fu.get("/part", function (req, res) {

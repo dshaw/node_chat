@@ -1,10 +1,11 @@
-var CONFIG = { debug: false
-             , nick: "#"   // set in onConnect
-             , id: null    // set in onConnect
-             , last_message_time: 1
-             , focus: true //event listeners bound in onConnect
-             , unread: 0 //updated in the message-processing loop
-             };
+var CONFIG = {
+  debug: false,
+  nick: "#",   // set in onConnect
+  id: null,    // set in onConnect
+  last_message_time: 1,
+  focus: true, //event listeners bound in onConnect
+  unread: 0 //updated in the message-processing loop
+};
 
 var nicks = [];
 
@@ -107,14 +108,14 @@ Date.fromString = function(str) {
 
 
 
-//updates the users link to reflect the number of active users
+// updates the users link to reflect the number of active users
 function updateUsersLink ( ) {
   var t = nicks.length.toString() + " user";
-  if (nicks.length != 1) t += "s";
+  if ( nicks.length != 1 ) t += "s";
   $("#usersLink").text(t);
 }
 
-//handles another person joining chat
+// handles another person joining chat
 function userJoin(nick, timestamp) {
   //put it in the stream
   addMessage(nick, "joined", timestamp, "join");
@@ -127,7 +128,7 @@ function userJoin(nick, timestamp) {
   updateUsersLink();
 }
 
-//handles someone leaving
+// handles someone leaving
 function userPart(nick, timestamp) {
   //put it in the stream
   addMessage(nick, "left", timestamp, "part");
@@ -187,10 +188,10 @@ function scrollDown () {
   $("#entry").focus();
 }
 
-//inserts an event into the stream for display
-//the event may be a msg, join or part type
-//from is the user, text is the body and time is the timestamp, defaulting to now
-//_class is a css class to apply to the message, usefull for system events
+// inserts an event into the stream for display
+// the event may be a msg, join or part type
+// from is the user, text is the body and time is the timestamp, defaulting to now
+// _class is a css class to apply to the message, usefull for system events
 function addMessage (from, text, time, _class) {
   if (text === null)
     return;
@@ -203,7 +204,7 @@ function addMessage (from, text, time, _class) {
     time = new Date(time);
   }
 
-  //every message you see is actually a table with 3 cols:
+  // every message you see is actually a table with 3 cols:
   //  the time,
   //  the person who caused the event,
   //  and the content
@@ -222,7 +223,7 @@ function addMessage (from, text, time, _class) {
     messageElement.addClass("personal");
 
   // replace URLs with links
-  text = text.replace(util.urlRE, '<a target="_blank" href="$&">$&</a>');
+  text = text.replace(util.urlRE, '<a target="_blank" href="$&" rel="nofollow">$&</a>');
 
   var content = '<tr>'
               + '  <td class="date">' + util.timeString(time) + '</td>'
@@ -258,7 +259,7 @@ var transmission_errors = 0;
 var first_poll = true;
 
 
-//process updates if we have any, request updates from the server,
+// process updates if we have any, request updates from the server,
 // and call again with response. the last part is like recursion except the call
 // is being made from the response handler, and not at some point during the
 // function's execution.
@@ -346,6 +347,7 @@ function send(msg) {
 
 //Transition the page to the state that prompts the user for a nickname
 function showConnect () {
+  $("#forkme").show();
   $("#connect").show();
   $("#loading").hide();
   $("#toolbar").hide();
@@ -431,6 +433,12 @@ function who () {
   }, "json");
 }
 
+// log user out of chat
+function logout() {
+  jQuery.get("/part", {id: CONFIG.id}, function (data) { }, "json");
+}
+
+
 $(document).ready(function() {
 
   //submit new messages when the user hits enter if the message isnt blank
@@ -443,11 +451,17 @@ $(document).ready(function() {
 
   $("#usersLink").click(outputUsers);
 
+  $("#logout").click(function(){
+    logout();
+    showConnect();
+    return false;
+  });
+
   //try joining the chat when the user clicks the connect button
   $("#connectButton").click(function () {
     //lock the UI while waiting for a response
     showLoad();
-    var nick = $("#nickInput").attr("value");
+    var nick = $("#nickInput").val();
 
     //dont bother the backend if we fail easy validations
     if (nick.length > 50) {
@@ -464,17 +478,20 @@ $(document).ready(function() {
     }
 
     //make the actual join request to the server
-    $.ajax({ cache: false
-           , type: "GET" // XXX should be POST
-           , dataType: "json"
-           , url: "/join"
-           , data: { nick: nick }
-           , error: function () {
-               alert("error connecting to server");
-               showConnect();
-             }
-           , success: onConnect
-           });
+    $.ajax({
+      cache: false,
+      type: "GET", // XXX should be POST
+      dataType: "json",
+      url: "/join",
+      data: { nick: nick },
+      error: function (xhr, textStatus, errorThrown) {
+        var response = $.parseJSON(xhr.responseText),
+            msg = response.error || "Error connecting to server";
+        alert(msg);
+        showConnect();
+       },
+      success: onConnect
+    });
     return false;
   });
 
@@ -503,5 +520,5 @@ $(document).ready(function() {
 
 //if we can, notify the server that we're going away.
 $(window).unload(function () {
-  jQuery.get("/part", {id: CONFIG.id}, function (data) { }, "json");
+  logout();
 });
